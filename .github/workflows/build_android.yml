@@ -29,18 +29,30 @@ jobs:
       - name: Download Export Templates
         run: |
           wget -q https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_export_templates.tpz
-          mkdir -p ~/.local/share/godot/export_templates/
+          mkdir -p ~/.local/share/godot/export_templates/4.4.stable/
           unzip -q Godot_v4.4-stable_export_templates.tpz
           mv templates/* ~/.local/share/godot/export_templates/4.4.stable/
+          ls -la ~/.local/share/godot/export_templates/4.4.stable/
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Generate .godot cache (Pre-heating)
         run: |
           timeout 60 godot --headless --path . --quit || true
 
+      - name: Setup Android Keystore
+        run: |
+          mkdir -p ~/.config/godot
+          keytool -genkey -v -keystore ~/.config/godot/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - name: Export APK
         run: |
           mkdir -p builds/android
-          godot --headless --path . --export-release "Android" builds/android/game.apk
+          godot --headless --path . --export-debug "Android" builds/android/game.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
