@@ -1,0 +1,49 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Download Godot 4.4
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_linux.x86_64.zip
+          unzip -q Godot_v4.4-stable_linux.x86_64.zip
+          sudo mv Godot_v4.4-stable_linux.x86_64 /usr/local/bin/godot
+          sudo chmod +x /usr/local/bin/godot
+
+      - name: Download Export Templates
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/4.4-stable/Godot_v4.4-stable_export_templates.tpz
+          mkdir -p ~/.local/share/godot/export_templates/
+          unzip -q Godot_v4.4-stable_export_templates.tpz
+          mv templates/* ~/.local/share/godot/export_templates/4.4.stable/
+
+      - name: Generate .godot cache (Pre-heating)
+        run: |
+          timeout 60 godot --headless --path . --quit || true
+
+      - name: Export APK
+        run: |
+          mkdir -p builds/android
+          godot --headless --path . --export-release "Android" builds/android/game.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Naftkesh-APK
+          path: builds/android/game.apk
